@@ -1,0 +1,21 @@
+{
+  "name": "dual-calendar-agent",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node src/server.js",
+    "connect-google-calendar": "node src/connect-google-calendar.js",
+    "verify-google-calendar": "node src/verify-google-calendar.js",
+    "connect-apple-calendar": "node src/connect-apple-calendar.js",
+    "configure-imessage-self-chat": "node src/configure-imessage-self-chat.js",
+    "run-imessage": "node src/run-imessage.js",
+    "test": "node --test"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "google-auth-library": "^10.9.1"
+  }
+}
