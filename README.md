@@ -112,6 +112,32 @@ You can also mention the bot instead of typing `@assistant`. The bot ignores
 other users, bots, webhooks, and unapproved server channels. Discord state is
 stored locally under `data/discord-state/` and is separate for each channel.
 
+### Hosting the Discord bot
+
+Discord requires a process that remains connected to its gateway, so do not use
+a sleeping free web host or a serverless function for `npm run run-discord`.
+The iMessage watcher must remain on a signed-in Mac, but the Discord bot can be
+hosted independently so it remains available when the Mac is off.
+
+Recommended hosting choices:
+
+| Option | Typical cost | Notes |
+| --- | ---: | --- |
+| Oracle Cloud Always Free VM | $0 | A Linux VM can run the bot continuously, but free capacity may be unavailable and idle instances can be reclaimed. |
+| AWS Lightsail Nano | $5/month | Recommended for a simple, predictable deployment with persistent disk storage. |
+| Render background worker | about $7/month | Managed deployment, but attach persistent storage or move state to a database. |
+| Railway persistent service | usage-based | Convenient GitHub deployments and secret environment variables; use an always-on service rather than a cron job. |
+
+On a VM, run the bot under a process manager such as `systemd` so it restarts
+after a crash or reboot. Keep `DISCORD_BOT_TOKEN` and calendar credentials in
+the host's secret/configuration store, never in Git.
+
+The current Discord implementation persists conversation state as local JSON
+files and uses local Google credentials. Before deploying it to a managed host,
+move Google credentials to that host's secret store and either keep a persistent
+disk or migrate the JSON state to a managed database. This prevents lost pending
+proposals after a deploy or restart.
+
 ## Create an event
 
 ```sh
