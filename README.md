@@ -49,9 +49,9 @@ unavailable it falls back to an owner-only file at
 
 ## Messaging interfaces
 
-The assistant can run through iMessage and Discord at the same time. Both
-adapters use the same proposal, approval, deduplication, and calendar-planning
-workflow, but keep their conversation state separate.
+The assistant can run through iMessage and Discord at the same time. iMessage
+uses a local watcher; Discord uses on-demand slash-command interactions, so it
+does not need a continuously running bot process.
 
 ## iMessage self-chat mode
 
@@ -80,63 +80,82 @@ Examples:
 creates a calendar event until both Google and Apple Calendar connectors are
 configured; it will say so instead of silently writing only one calendar.
 
-## Discord text bot
+## Discord on-demand slash commands
 
 Create a Discord application and bot in the [Discord Developer Portal](https://discord.com/developers/applications), enable
-the **Message Content Intent**, then invite it to your server if you want to
-use a shared channel. Configure these environment variables without committing
-the bot token:
+the `applications.commands` install scope, and configure its **Interactions
+Endpoint URL** to `https://your-host.example/discord/interactions`. Unlike a
+text-listening bot, this uses slash commands and does not require the Message
+Content Intent or an always-on Gateway connection.
+
+The endpoint needs an HTTPS serverless host and a persistent state store.
+This implementation uses [Upstash Redis](https://upstash.com/) through its REST
+API, which works from serverless functions. Configure these deployment secrets
+without committing them:
 
 ```sh
-DISCORD_BOT_TOKEN="your bot token"
+DISCORD_APPLICATION_ID="your Discord application ID"
+DISCORD_PUBLIC_KEY="your Discord application public key"
 DISCORD_ALLOWED_USER_IDS="your Discord user ID"
-# Optional: comma-separated channel IDs. Without this, only authorized-user DMs are accepted.
-DISCORD_ALLOWED_CHANNEL_IDS="your private channel ID"
+UPSTASH_REDIS_REST_URL="https://...upstash.io"
+UPSTASH_REDIS_REST_TOKEN="..."
+GOOGLE_CALENDAR_CREDENTIALS_JSON="{...OAuth credential record...}"
 ```
 
-Start it alongside the iMessage watcher if desired:
+Run the interaction endpoint locally or on a traditional host with:
 
 ```sh
-npm run run-discord
+npm run run-discord-interactions
 ```
 
-In an authorized DM or channel, send the same text commands used by iMessage:
+For an on-demand deployment, this repository includes a Vercel function at
+`api/discord/interactions.js`. Import the repository into Vercel, add the
+secrets above in the project settings, deploy it, and paste the deployed
+`https://<project>.vercel.app/api/discord/interactions` URL into Discord's
+Interactions Endpoint URL field. The function verifies Discord's Ed25519
+signature before reading a command.
+
+Register the commands once after setting `DISCORD_APPLICATION_ID` and
+`DISCORD_BOT_TOKEN`. Set `DISCORD_GUILD_ID` too during development for near
+immediate command updates; omit it to register global commands.
+
+```sh
+npm run configure-discord-commands
+```
+
+In Discord, use:
 
 ```text
-@assistant help
-@assistant schedule Gym tomorrow at 9 AM for 1 hour
-@assistant yes
+/help
+/schedule title:Gym when:"tomorrow at 9 AM" duration:"1 hour"
+/approve
+/status
 ```
 
-You can also mention the bot instead of typing `@assistant`. The bot ignores
-other users, bots, webhooks, and unapproved server channels. Discord state is
-stored locally under `data/discord-state/` and is separate for each channel.
+Only IDs listed in `DISCORD_ALLOWED_USER_IDS` may use the assistant. Proposal
+state is stored by Discord conversation and user in Redis, so `/approve` works
+across separate serverless invocations. Discord responses are private
+(ephemeral) by default.
 
-### Hosting the Discord bot
+### Hosting the Discord interactions endpoint
 
-Discord requires a process that remains connected to its gateway, so do not use
-a sleeping free web host or a serverless function for `npm run run-discord`.
-The iMessage watcher must remain on a signed-in Mac, but the Discord bot can be
-hosted independently so it remains available when the Mac is off.
+The Discord endpoint executes only when Discord invokes a slash command, so a
+serverless host is appropriate. The iMessage watcher still must remain on a
+signed-in Mac, but Discord stays available when the Mac is off.
 
 Recommended hosting choices:
 
 | Option | Typical cost | Notes |
 | --- | ---: | --- |
-| Oracle Cloud Always Free VM | $0 | A Linux VM can run the bot continuously, but free capacity may be unavailable and idle instances can be reclaimed. |
-| AWS Lightsail Nano | $5/month | Recommended for a simple, predictable deployment with persistent disk storage. |
-| Render background worker | about $7/month | Managed deployment, but attach persistent storage or move state to a database. |
-| Railway persistent service | usage-based | Convenient GitHub deployments and secret environment variables; use an always-on service rather than a cron job. |
+| Serverless function host | free/low-cost | Recommended. Runs only for Discord slash-command requests; pair it with Upstash Redis. |
+| Railway | free trial, then usage-based | Suitable as an HTTPS host, but its always-on service model is not necessary for this endpoint. |
+| AWS Lightsail / Oracle VM | $0–$5/month | Works, but is more operational work and runs continuously. |
 
-On a VM, run the bot under a process manager such as `systemd` so it restarts
-after a crash or reboot. Keep `DISCORD_BOT_TOKEN` and calendar credentials in
-the host's secret/configuration store, never in Git.
-
-The current Discord implementation persists conversation state as local JSON
-files and uses local Google credentials. Before deploying it to a managed host,
-move Google credentials to that host's secret store and either keep a persistent
-disk or migrate the JSON state to a managed database. This prevents lost pending
-proposals after a deploy or restart.
+Keep `DISCORD_PUBLIC_KEY`, Redis credentials, and Google OAuth credentials in
+the host's encrypted secret store, never in Git. The calendar credential secret
+is a JSON OAuth record with `clientId`, `clientSecret`, and `tokens` (including
+the refresh token), matching the secure record created by the local Google
+connection flow.
 
 ## Create an event
 

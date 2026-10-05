@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { discordConfigFromEnv } from '../src/discord-config.js';
+import { discordConfigFromEnv, discordInteractionsConfigFromEnv } from '../src/discord-config.js';
 
 const userId = '123456789012345678';
 
@@ -18,4 +18,16 @@ test('Discord configuration accepts user and channel allowlists', () => {
   assert.deepEqual(config.allowedUserIds, [userId]);
   assert.deepEqual(config.allowedChannelIds, ['223456789012345678', '323456789012345678']);
   assert.equal(config.commandPrefix, '@assistant');
+});
+
+test('Discord interactions configuration requires serverless secrets', () => {
+  assert.throws(() => discordInteractionsConfigFromEnv({}), /DISCORD_APPLICATION_ID/);
+  const config = discordInteractionsConfigFromEnv({
+    DISCORD_APPLICATION_ID: userId,
+    DISCORD_PUBLIC_KEY: 'a'.repeat(64),
+    DISCORD_ALLOWED_USER_IDS: userId,
+    UPSTASH_REDIS_REST_URL: 'https://example.upstash.io',
+    UPSTASH_REDIS_REST_TOKEN: 'secret'
+  });
+  assert.equal(config.applicationId, userId);
 });

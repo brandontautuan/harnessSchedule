@@ -5,7 +5,8 @@
   "type": "module",
   "scripts": {
     "start": "node src/server.js",
-    "run-discord": "node src/run-discord.js",
+    "run-discord-interactions": "node src/run-discord-interactions.js",
+    "configure-discord-commands": "node src/configure-discord-commands.js",
     "connect-google-calendar": "node src/connect-google-calendar.js",
     "verify-google-calendar": "node src/verify-google-calendar.js",
     "connect-apple-calendar": "node src/connect-apple-calendar.js",

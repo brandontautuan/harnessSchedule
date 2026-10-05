@@ -10,6 +10,18 @@ const ACCOUNT = 'default';
 
 export class CredentialStoreError extends Error {}
 
+// For serverless deployments, provide the complete OAuth credential record as
+// one encrypted platform secret. Refreshing an access token does not require
+// writing a new refresh token, so this store intentionally never persists it.
+export class EnvironmentGoogleCredentialStore {
+  constructor(value = process.env.GOOGLE_CALENDAR_CREDENTIALS_JSON) { this.value = value; }
+  async load() {
+    if (!this.value) return null;
+    return parseCredentialRecord(this.value);
+  }
+  async save() { return { location: 'environment secret' }; }
+}
+
 export class GoogleCredentialStore {
   constructor({ keychain = process.platform === 'darwin', fallbackPath = join(homedir(), '.config', 'harness-schedule', 'google-calendar-oauth.json') } = {}) {
     this.keychain = keychain;
