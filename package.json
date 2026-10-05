@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "start": "node src/server.js",
+    "run-discord": "node src/run-discord.js",
     "connect-google-calendar": "node src/connect-google-calendar.js",
     "verify-google-calendar": "node src/verify-google-calendar.js",
     "connect-apple-calendar": "node src/connect-apple-calendar.js",
@@ -16,6 +17,7 @@
     "node": ">=20"
   },
   "dependencies": {
+    "discord.js": "^14.27.0",
     "google-auth-library": "^10.9.1"
   }
 }

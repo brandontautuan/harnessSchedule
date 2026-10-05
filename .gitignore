@@ -1,4 +1,5 @@
 .env
 data/*.json
+data/discord-state/
 !data/.gitkeep
 node_modules/

@@ -47,6 +47,12 @@ or stored in the repository. The command uses macOS Keychain; if Keychain is
 unavailable it falls back to an owner-only file at
 `~/.config/harness-schedule/google-calendar-oauth.json`.
 
+## Messaging interfaces
+
+The assistant can run through iMessage and Discord at the same time. Both
+adapters use the same proposal, approval, deduplication, and calendar-planning
+workflow, but keep their conversation state separate.
+
 ## iMessage self-chat mode
 
 This is a local-only development interface for one self-chat. It accepts only
@@ -73,6 +79,38 @@ Examples:
 `yes` only approves an existing proposal. This initial iMessage slice never
 creates a calendar event until both Google and Apple Calendar connectors are
 configured; it will say so instead of silently writing only one calendar.
+
+## Discord text bot
+
+Create a Discord application and bot in the [Discord Developer Portal](https://discord.com/developers/applications), enable
+the **Message Content Intent**, then invite it to your server if you want to
+use a shared channel. Configure these environment variables without committing
+the bot token:
+
+```sh
+DISCORD_BOT_TOKEN="your bot token"
+DISCORD_ALLOWED_USER_IDS="your Discord user ID"
+# Optional: comma-separated channel IDs. Without this, only authorized-user DMs are accepted.
+DISCORD_ALLOWED_CHANNEL_IDS="your private channel ID"
+```
+
+Start it alongside the iMessage watcher if desired:
+
+```sh
+npm run run-discord
+```
+
+In an authorized DM or channel, send the same text commands used by iMessage:
+
+```text
+@assistant help
+@assistant schedule Gym tomorrow at 9 AM for 1 hour
+@assistant yes
+```
+
+You can also mention the bot instead of typing `@assistant`. The bot ignores
+other users, bots, webhooks, and unapproved server channels. Discord state is
+stored locally under `data/discord-state/` and is separate for each channel.
 
 ## Create an event
 
